@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 const port = 3000;
@@ -13,6 +14,12 @@ const db = new pg.Client({
   port: 5432
 });
 db.connect();
+
+// Set up rate limiter: maximum 100 requests per 15 minutes per IP
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+});
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
@@ -32,7 +39,7 @@ app.get("/", async (req, res) => {
   res.render("index.ejs", { countries: countries, total: countries.length });
 });
 
-app.post("/add", async (req, res) => {
+app.post("/add", limiter, async (req, res) => {
   const input = req.body["country"];
 
   try {
